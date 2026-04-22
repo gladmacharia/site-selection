@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nairobi Emergency Dispatch</title>
+    
+    <!-- 1. The Leaflet CSS (THIS FIXES THE JUMBLED MAP) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    
+    <!-- 2. Bulletproof Fullscreen CSS -->
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e5e5e5;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+            z-index: 1; /* Keeps map in the background */
+        }
+        #info-box {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000; /* Keeps box on top of the map */
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+            width: 320px;
+        }
+        .status-text { color: #555; font-size: 14px; }
+        .error-text { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <div id="info-box">
+        <h2 style="margin-top:0; color: #2c3e50;">🚑 Dispatch Center</h2>
+        <p class="status-text"><strong>Click anywhere on the map</strong> to report an emergency. The system will find the nearest solution.</p>
+        <hr style="border: 0; height: 1px; background: #ddd;">
+        <p id="result-text" style="color: #2980b9; font-weight: bold;">Awaiting incident report...</p>
+    </div>
+
+    <!-- 3. The Leaflet JS Engine -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <script>
+        var map = L.map('map').setView([-1.2921, 36.8219], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap',
+            maxZoom: 19
+        }).addTo(map);
+
+        var incidentMarker, hospitalMarker, routingLine;
+
+        map.on('click', function(e) {
+            var lat = e.latlng.lat;
+            var lon = e.latlng.lng;
+
+            document.getElementById('result-text').innerText = "Locating nearest facility... ⏳";
+            document.getElementById('result-text').className = "";
+
+            // Ping the backend
+            fetch(`/api/nearest_hospital/${lat}/${lon}`)
+                .then(response => response.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        if(incidentMarker) map.removeLayer(incidentMarker);
+                        if(hospitalMarker) map.removeLayer(hospitalMarker);
+                        if(routingLine) map.removeLayer(routingLine);
+
+                        incidentMarker = L.circleMarker([lat, lon], {
+                            color: '#e74c3c', radius: 8, fillOpacity: 1
+                        }).addTo(map).bindPopup("⚠️ Incident Location").openPopup();
+
+                        hospitalMarker = L.marker([data.hospital_latitude, data.hospital_longitude])
+                            .addTo(map).bindPopup(`<b>${data.hospital_name}</b><br>${data.type}`);
+
+                        routingLine = L.polyline([[lat, lon], [data.hospital_latitude, data.hospital_longitude]], {
+                            color: '#2980b9', weight: 4, dashArray: '8, 8'
+                        }).addTo(map);
+
+                        document.getElementById('result-text').innerHTML = `
+                            <span style="color:green;">✅ Facility Found!</span><br><br>
+                            <strong>Name:</strong> ${data.hospital_name} <br>
+                            <strong>Type:</strong> ${data.type} <br>
+                            <strong>Distance:</strong> ${data.distance_meters} meters
+                        `;
+
+                        map.fitBounds(routingLine.getBounds(), {padding: [50, 50]});
+                    } else {
+                        // If the database sends an error, show it on the screen!
+                        document.getElementById('result-text').innerHTML = `❌ Error: ${data.message}`;
+                        document.getElementById('result-text').className = "error-text";
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('result-text').innerHTML = "❌ Critical Server Error!";
+                    document.getElementById('result-text').className = "error-text";
+                    console.error("Fetch error:", error);
+                });
+        });
+    </script>
+</body>
+</html>

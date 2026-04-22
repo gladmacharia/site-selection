@@ -51,7 +51,6 @@ try:
         if_exists="replace",
         index=False
     )
-    print("Succesfly added to the database")
 
 except Exception as e:
     print(f"Database error: {e}")
