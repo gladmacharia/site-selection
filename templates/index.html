@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nairobi Emergency Dispatch</title>
     
-    <!-- 1. The Leaflet CSS (THIS FIXES THE JUMBLED MAP) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     
-    <!-- 2. Bulletproof Fullscreen CSS -->
+    
     <style>
         html, body {
             height: 100%;
@@ -20,13 +19,13 @@
         #map {
             height: 100%;
             width: 100%;
-            z-index: 1; /* Keeps map in the background */
+            z-index: 1; 
         }
         #info-box {
             position: absolute;
             top: 20px;
             right: 20px;
-            z-index: 1000; /* Keeps box on top of the map */
+            z-index: 1000; 
             background: white;
             padding: 20px;
             border-radius: 12px;
@@ -48,7 +47,6 @@
         <p id="result-text" style="color: #2980b9; font-weight: bold;">Awaiting incident report...</p>
     </div>
 
-    <!-- 3. The Leaflet JS Engine -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
     <script>
@@ -68,7 +66,7 @@
             document.getElementById('result-text').innerText = "Locating nearest facility... ⏳";
             document.getElementById('result-text').className = "";
 
-            // Ping the backend
+            // the backend
             fetch(`/api/nearest_hospital/${lat}/${lon}`)
                 .then(response => response.json())
                 .then(data => {
@@ -97,7 +95,6 @@
 
                         map.fitBounds(routingLine.getBounds(), {padding: [50, 50]});
                     } else {
-                        // If the database sends an error, show it on the screen!
                         document.getElementById('result-text').innerHTML = `❌ Error: ${data.message}`;
                         document.getElementById('result-text').className = "error-text";
                     }
